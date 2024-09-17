@@ -53,12 +53,12 @@ defmodule PhoenixSVG do
         case PhoenixSVG.Helpers.read_file!(svg, svg_path) do
           {name, [], content} ->
             def unquote(as)(%{name: unquote(name)} = assigns) do
-              PhoenixSVG.render(unquote(content), unquote(attributes), assigns)
+              PhoenixSVG.render(unquote(content), unquote(name), unquote(attributes), assigns)
             end
 
           {name, path, content} ->
             def unquote(as)(%{name: unquote(name), path: unquote(path)} = assigns) do
-              PhoenixSVG.render(unquote(content), unquote(attributes), assigns)
+              PhoenixSVG.render(unquote(content), unquote(name), unquote(attributes), assigns)
             end
         end
       end
@@ -75,7 +75,19 @@ defmodule PhoenixSVG do
   end
 
   @doc false
-  def render("<svg" <> tail, attributes, assigns) do
+  def render([sym, svg, tail], name, attributes, assigns) do
+    state = Process.get(:__phoenix_svg__, %{})
+
+    {h, t} =
+      case Map.get(state, name) do
+        nil ->
+          Process.put(:__phoenix_svg__, Map.put(state, name, true))
+          {sym, tail}
+
+        _ ->
+          {svg, tail}
+      end
+
     html_attrs =
       attributes
       |> Enum.into(%{})
@@ -84,7 +96,7 @@ defmodule PhoenixSVG do
       |> PhoenixSVG.Helpers.to_safe_html_attrs()
 
     assigns = %{
-      inner_content: raw(["<svg ", html_attrs, String.trim(tail)])
+      inner_content: raw([h, html_attrs, t])
     }
 
     ~H"""

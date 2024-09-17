@@ -21,7 +21,25 @@ defmodule PhoenixSVG.Helpers do
   # names the file is nested in relative to the base path.
   def read_file!(filepath, basepath) do
     name = Path.basename(filepath) |> Path.rootname()
+    id = "phoenix_svg__#{name}"
     content = File.read!(filepath) |> String.trim()
+    [h, t] = String.split(content, "<svg", parts: 2)
+    view_box = Regex.run(~r/^[^>]+\KviewBox="[^"]+"/, t) |> List.wrap()
+
+    sym = h <> "<symbol id=\"#{id}\" " <> t
+    sym = Regex.split(~r[(</svg>)(?!.*\1)], sym) |> then(fn [h, t] -> h <> "</symbol>" <> t end)
+
+    sym =
+      [
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"display:none\"> ",
+        sym,
+        "</svg>",
+        "<svg #{view_box} "
+      ]
+      |> Enum.join("")
+
+    content = [sym, "<svg #{view_box} ", "><use href=\"##{id}\"></svg>"]
+
     rel_path = Path.relative_to(filepath, basepath)
 
     path =
