@@ -79,11 +79,16 @@ defmodule PhoenixSVG do
     state = Process.get(:__phoenix_svg__, %{})
 
     {h, t} =
-      if assigns[:skip_cache] or Map.get(state, name) == nil do
-        Process.put(:__phoenix_svg__, Map.put(state, name, true))
-        {sym, tail}
-      else
-        {svg, tail}
+      cond do
+        assigns[:skip_cache] ->
+          {sym, tail}
+
+        Map.get(state, name) ->
+          {svg, tail}
+
+        true ->
+          Process.put(:__phoenix_svg__, Map.put(state, name, true))
+          {sym, tail}
       end
 
     html_attrs =
